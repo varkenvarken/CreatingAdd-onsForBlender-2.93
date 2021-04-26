@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  Ladder, a Blender addon
-#  (c) 2016 Michel J. Anders (varkenvarken)
+#  (c) 2016 - 2021 Michel J. Anders (varkenvarken)
 #
 #  This program is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU General Public License
@@ -22,8 +22,8 @@
 bl_info = {
 	"name": "Ladder",
 	"author": "Michel Anders (varkenvarken)",
-	"version": (0, 0, 201607271133),
-	"blender": (2, 76, 0),
+	"version": (0, 0, 202104261101),
+	"blender": (2, 92, 0),
 	"location": "View3D > Add > Mesh > Ladder",
 	"description": "Adds a ladder mesh object to the scene",
 	"warning": "",
@@ -33,6 +33,7 @@ bl_info = {
 
 import bpy
 import bmesh
+from bpy_extras import object_utils
 from bpy.props import FloatProperty, IntProperty, BoolProperty
 from bpy.app.handlers import persistent
 
@@ -158,17 +159,11 @@ def updateLadderObject(ob):
 	me.update()
 	bm.free()  # free and prevent further access
 
-	# mark object as smooth (example of using ops on active object)
-	#bpy.ops.object.shade_smooth()
-	
-	
 	# add mirror modifier and subsurface modifier if needed
 	mods = ob.modifiers
 	if 'Mirror' not in mods:
 		m = mods.new('Mirror','MIRROR')
-		m.use_x = True
-		m.use_y = False
-		m.use_z = False
+		m.use_axis = [True, False, False]
 	if 'Subsurf' not in mods:
 		m = mods.new('Subsurf','SUBSURF')
 		m.levels = 2
@@ -183,35 +178,35 @@ def updateLadder(self, context):
 	updateLadderObject(ob)
 
 class LadderPropertyGroup(bpy.types.PropertyGroup):
-	ladder= BoolProperty(	name="Ladder", default=False)
+	ladder: BoolProperty(	name="Ladder", default=False)
 
-	taper = FloatProperty(	name="Taper",
+	taper : FloatProperty(	name="Taper",
 							description="Perc. tapering towards top",
 							default=0, min=0, max=100,
 							subtype='PERCENTAGE',
 							update=updateLadder)
-	width = FloatProperty(	name="Width",
+	width : FloatProperty(	name="Width",
 							description="Width of the ladder",
 							default=0.5, min=0.3, soft_max=.6,
 							unit='LENGTH',
 							update=updateLadder)
-	height= FloatProperty(	name="Height",
+	height: FloatProperty(	name="Height",
 							description="Step height",
 							default=0.3, min=0.1, soft_max=.5,
 							unit='LENGTH',
 							update=updateLadder)
-	rungs = IntProperty(	name="# Rungs",
+	rungs : IntProperty(	name="# Rungs",
 							description="Number of rungs",
 							default=12, min=1, soft_max=30,
 							update=updateLadder)
 
-class LadderPropsPanel(bpy.types.Panel):
+class LADDER_PT_Props(bpy.types.Panel):
 	bl_label = "Ladder"
 	bl_space_type = "VIEW_3D"
-	bl_region_type = "TOOLS"
+	bl_region_type = "UI"
 	bl_category = "Ladder"
-	bl_options = set()
-	
+	bl_options = {'DEFAULT_CLOSED'}
+
 	@classmethod
 	def poll(self, context):
 		# Check if we are in object mode (and we are dealing with a ladder object)
@@ -229,7 +224,7 @@ class LadderPropsPanel(bpy.types.Panel):
 		layout.prop(ob, 'taper')
 
 
-class Ladder(bpy.types.Operator):
+class Ladder(bpy.types.Operator, object_utils.AddObjectHelper):
 	"""Add a ladder mesh object to the scene"""
 	bl_idname = "mesh.ladder05"
 	bl_label = "Ladder"
@@ -243,18 +238,11 @@ class Ladder(bpy.types.Operator):
 		# create a new empty mesh
 		me = bpy.data.meshes.new(name='Ladder')
 
-		# create a new object and identify it as a ladder object
-		ob = bpy.data.objects.new('Ladder', me)
-		ob.ladder.ladder = True
-
-		# associate the mesh with the object
-		ob.data = me
-
 		# link the object to the scene & make it active and selected
-		context.scene.objects.link(ob)
-		context.scene.update()
-		context.scene.objects.active = ob
-		ob.select = True
+		ob = object_utils.object_data_add(context, me, operator=self)
+
+		# mark it as a Ladder object
+		ob.ladder.ladder = True
 
 		# create the geometry based on properties in the Ladder panel
 		updateLadder(self, context)
@@ -263,30 +251,30 @@ class Ladder(bpy.types.Operator):
 
 @persistent
 def update_ladders(scene):
-	print("update_ladders", scene, scene.frame_current)
 	for ob in scene.objects:
 		if hasattr(ob,'ladder'):
 			if ob.ladder.ladder:
-				print(ob)
 				updateLadderObject(ob)
-	scene.update()
+
+classes = [Ladder, LadderPropertyGroup, LADDER_PT_Props]
+
+register_classes, unregister_classes = bpy.utils.register_classes_factory(classes)
 
 def register():
-	bpy.utils.register_module(__name__)
+	register_classes()
 	# adding a pointer to a propertygroup will cause *every* object in the scene to have a pointer to a possibly empty propertygroup
 	# only when assigning to a member of this property group will this propertygroup itself be instantiated
 	bpy.types.Object.ladder = bpy.props.PointerProperty(type=LadderPropertyGroup)
-	bpy.types.INFO_MT_mesh_add.append(menu_func)
+	bpy.types.VIEW3D_MT_add.append(menu_func)
 	# add a post frame change handler to update all ladder objects.
 	# w.o. it object properties can be animated but will not result in actual changes to the object.
-	# (this is a known issue https://developer.blender.org/T48285 )
+	# (this is still a known issue https://developer.blender.org/T48285 )
 	bpy.app.handlers.frame_change_post.append(update_ladders)
 
 def unregister():
-	bpy.utils.unregister_module(__name__)
-	bpy.types.INFO_MT_mesh_add.remove(menu_func)
 	bpy.app.handlers.frame_change_post.remove(update_ladders)
-	bpy.utils.unregister_module(__name__)
-	
+	bpy.types.VIEW3D_MT_add.remove(menu_func)
+	unregister_classes()
+
 def menu_func(self, context):
 	self.layout.operator(Ladder.bl_idname, icon='PLUGIN')

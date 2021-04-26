@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  Move, a Blender addon
-#  (c) 2016 Michel J. Anders (varkenvarken)
+#  (c) 2016-2021 Michel J. Anders (varkenvarken)
 #
 #  This program is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU General Public License
@@ -22,8 +22,8 @@
 bl_info = {
 	"name": "MoveObject",
 	"author": "Michel Anders (varkenvarken)",
-	"version": (0, 0, 20160104121212),
-	"blender": (2, 76, 0),
+	"version": (0, 0, 202104260835),
+	"blender": (2, 92, 0),
 	"location": "View3D > Object > Move",
 	"description": "Moves and object",
 	"warning": "",
@@ -48,15 +48,22 @@ class MoveObject(bpy.types.Operator):
 # registering an operator is necessary so the user can find it
 # we create a wrapper function here so that we have a single
 # point where we can register multiple operators if needed and
-# and add operator to menus if desired.
+# and add operators to menus if desired.
+# we also make use of the register_classes_factory() provided
+# in the bpy.utils module to make the actual registration of
+# of operators (and later also other objects, like Panels) easier.
+
+classes = [MoveObject]
+
+register_classes, unregister_classes = bpy.utils.register_classes_factory(classes)
  
 def register():
-    bpy.utils.register_module(__name__)
+    register_classes()
     bpy.types.VIEW3D_MT_object.append(menu_func)
 
 # the unregister() function is needed for deinstalling add-ons
 def unregister():
-    bpy.utils.unregister_module(__name__)
+    unregister_classes()
     bpy.types.VIEW3D_MT_object.remove(menu_func)
 
 def menu_func(self, context):

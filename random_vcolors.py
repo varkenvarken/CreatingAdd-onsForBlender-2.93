@@ -1,3 +1,8 @@
+# code snippet
+# assign random vertex colors to all faces
+# mesh should be in vertex paint mode, but no checks are done at all
+# run this from the text editor
+
 from random import random
 import bpy
 import bmesh
@@ -14,7 +19,7 @@ if vcolor is None:
     vcolor = bm.loops.layers.color.new()
     
 for face in bm.faces:
-    color = (random(), random(), random())
+    color = (random(), random(), random(), 1.0)
     for loop in face.loops:
         loop[vcolor] = color
 

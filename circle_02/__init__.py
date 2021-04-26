@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  Circle, a Blender addon
-#  (c) 2016 Michel J. Anders (varkenvarken)
+#  (c) 2016 - 2021 Michel J. Anders (varkenvarken)
 #
 #  This program is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU General Public License
@@ -22,8 +22,8 @@
 bl_info = {
 	"name": "CircleObjects",
 	"author": "Michel Anders (varkenvarken)",
-	"version": (0, 0, 201601061418),
-	"blender": (2, 76, 0),
+	"version": (0, 0, 202104260855),
+	"blender": (2, 92, 0),
 	"location": "View3D > Object > Circle",
 	"description": "Arranges selected objects in a circle",
 	"warning": "",
@@ -78,13 +78,17 @@ def load_icon():
 	except Exception as e:
 		pass
 
+classes = [CircleObjects]
+
+register_classes, unregister_classes = bpy.utils.register_classes_factory(classes)
+
 def register():
 	load_icon()
-	bpy.utils.register_module(__name__)
+	register_classes()
 	bpy.types.VIEW3D_MT_object.append(menu_func)
 
 def unregister():
-	bpy.utils.unregister_module(__name__)
+	unregister_classes()
 	bpy.types.VIEW3D_MT_object.remove(menu_func)
 	for pcoll in preview_collections.values():
 		bpy.utils.previews.remove(pcoll)

@@ -1,3 +1,8 @@
+# code snippet
+# selects all vertices connected to currently selected verts
+# mesh should be in edit mode, but no checks are done at all
+# run this from the text editor
+
 import bpy
 import bmesh
 

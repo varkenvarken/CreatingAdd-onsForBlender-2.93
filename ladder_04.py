@@ -1,7 +1,7 @@
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  Ladder, a Blender addon
-#  (c) 2016 Michel J. Anders (varkenvarken)
+#  (c) 2016 - 2021 Michel J. Anders (varkenvarken)
 #
 #  This program is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU General Public License
@@ -22,8 +22,8 @@
 bl_info = {
 	"name": "Ladder",
 	"author": "Michel Anders (varkenvarken)",
-	"version": (0, 0, 201601071058),
-	"blender": (2, 76, 0),
+	"version": (0, 0, 202104260933),
+	"blender": (2, 92, 0),
 	"location": "View3D > Add > Mesh > Ladder",
 	"description": "Adds a ladder mesh object to the scene",
 	"warning": "",
@@ -34,6 +34,7 @@ bl_info = {
 import bpy
 import bmesh
 from bpy.props import FloatProperty, IntProperty
+from bpy_extras import object_utils
 from mathutils import Vector
 
 verts = [
@@ -125,16 +126,16 @@ def geometry(verts, faces, unit_height, unit_width, repetitions, taper):
 
 	return bm
 
-class Ladder(bpy.types.Operator):
+class Ladder(bpy.types.Operator, object_utils.AddObjectHelper):
 	"""Add a ladder mesh object to the scene"""
 	bl_idname = "mesh.ladder"
 	bl_label = "Ladder"
 	bl_options = {'REGISTER', 'UNDO', 'PRESET'}
 
-	taper = FloatProperty(name="Taper", description="Perc. tapering towards top", default=0, min=0, max=100, subtype='PERCENTAGE')
-	width = FloatProperty(name="Width", description="Width of the ladder", default=0.5, min=0.3, soft_max=.6, unit='LENGTH')
-	height= FloatProperty(name="Height", description="Step height", default=0.3, min=0.1, soft_max=.5, unit='LENGTH')
-	rungs = IntProperty(name="# Rungs", description="Number of rungs", default=12, min=1, soft_max=30)
+	taper : FloatProperty(name="Taper", description="Perc. tapering towards top", default=0, min=0, max=100, subtype='PERCENTAGE')
+	width : FloatProperty(name="Width", description="Width of the ladder", default=0.5, min=0.3, soft_max=.6, unit='LENGTH')
+	height: FloatProperty(name="Height", description="Step height", default=0.3, min=0.1, soft_max=.5, unit='LENGTH')
+	rungs : IntProperty(name="# Rungs", description="Number of rungs", default=12, min=1, soft_max=30)
 
 	@classmethod
 	def poll(cls, context):
@@ -143,9 +144,6 @@ class Ladder(bpy.types.Operator):
 	def execute(self, context):
 		# create a new empty mesh
 		me = bpy.data.meshes.new(name='Ladder')
-
-		# create a new object
-		ob = bpy.data.objects.new('Ladder', me)
 
 		# add some geometry
 		bm = geometry(	verts, faces,
@@ -159,20 +157,14 @@ class Ladder(bpy.types.Operator):
 		bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.001)
 
 		# TODO add a uv-map (two ways: mark seams and unwrap, or DIY layer
-		
+
 		# write the bmesh to the mesh
 		bm.to_mesh(me)
 		me.update()
 		bm.free()  # free and prevent further access
 
-		# associate the mesh with the object
-		ob.data = me
-
 		# link the object to the scene & make it active and selected
-		context.scene.objects.link(ob)
-		context.scene.update()
-		context.scene.objects.active = ob
-		ob.select = True
+		ob = object_utils.object_data_add(context, me, operator=self)
 
 		# mark object as smooth (example of using ops on active object)
 		bpy.ops.object.shade_smooth()
@@ -180,9 +172,7 @@ class Ladder(bpy.types.Operator):
 		# add mirror modifier and subsurface modifier
 		mods = ob.modifiers
 		m = mods.new('Mirror','MIRROR')
-		m.use_x = False
-		m.use_y = True
-		m.use_z = False
+		m.use_axis = [False, True, False]
 		m = mods.new('Subsurf','SUBSURF')
 		m.levels = 2
 		m.render_levels = 2
@@ -191,13 +181,17 @@ class Ladder(bpy.types.Operator):
 
 		return {'FINISHED'}
 
+classes = [Ladder]
+
+register_classes, unregister_classes = bpy.utils.register_classes_factory(classes)
+
 def register():
-	bpy.utils.register_module(__name__)
-	bpy.types.INFO_MT_mesh_add.append(menu_func)
+	register_classes()
+	bpy.types.VIEW3D_MT_add.append(menu_func)
 
 def unregister():
-	bpy.utils.unregister_module(__name__)
-	bpy.types.INFO_MT_mesh_add.remove(menu_func)
+	unregister_classes()
+	bpy.types.VIEW3D_MT_add.remove(menu_func)
 
 def menu_func(self, context):
 	self.layout.operator(Ladder.bl_idname, icon='PLUGIN')
