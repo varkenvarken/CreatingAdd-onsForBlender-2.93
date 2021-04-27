@@ -67,7 +67,7 @@ def unregister():
     bpy.types.VIEW3D_MT_object.remove(menu_func)
 
 def menu_func(self, context):
-	self.layout.operator(MoveObject.bl_idname, icon='MESH_CUBE')
+    self.layout.operator(MoveObject.bl_idname, icon='MESH_CUBE')
 
 if __name__ == "__main__":
     register()

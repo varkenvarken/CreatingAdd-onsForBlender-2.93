@@ -108,7 +108,7 @@ def geometry(unit_height, unit_width, repetitions, taper):
 	bm.edges.ensure_lookup_table()
 	bm.edges.index_update()
 
-	# bridge the 4 edges on the stile with those on the run 
+	# bridge the 4 edges on the stile with those on the rung 
 	bmesh.ops.bridge_loops(bm, edges=[bm.edges[e] for e in edge_loops])
 
 	bm.verts.ensure_lookup_table()
